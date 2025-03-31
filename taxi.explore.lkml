@@ -63,6 +63,21 @@ explore: yellow_tripdata_topn {
     relationship: one_to_one
     sql_on: coalesce(${yellow_tripdata.stacked_dimension}, 'no_match') = yellow_tripdata_rank.stacked_dimension ;;
   }
+  # always_join: [extra_join]
+  # join: extra_join {
+  #   view_label: " "
+  #   relationship: many_to_one
+  #   type: left_outer
+  #   sql:    {% if    yellow_tripdata.stack_by._parameter_value == "'Borough'" and pick_up._in_query != true %} left join looker_scratch.pickup   as pick_up on yellow_tripdata.dolocation_id = pick_up.location_id
+  #         {% elsif yellow_tripdata.stack_by._parameter_value == "'Service Zone'"  and pick_up._in_query != true%} left join looker_scratch.pickup  as pick_up on yellow_tripdata.dolocation_id = pick_up.location_id
+  #         {% elsif yellow_tripdata.stack_by._parameter_value == "'Zone'" and pick_up._in_query != true %} left join looker_scratch.pickup  as pick_up on yellow_tripdata.dolocation_id = pick_up.location_id
+  #         {% elsif yellow_tripdata.stack_by._parameter_value == "'Type'" and payment._in_query != true %} left join looker_scratch.payment as payment on payment.id = yellow_tripdata.payment_type
+  #         {% elsif yellow_tripdata.stack_by._parameter_value == "'Description'" and rate._in_query != true %} left join looker_scratch.rate as rate onrate.id = yellow_tripdata.ratecode_id
+  #         {% elsif yellow_tripdata.stack_by._parameter_value == "'Name'" and vendor._in_query != true %} left join looker_scratch.vendor as vendor on CAST(vendor.`Vendor ID` as STRING) = yellow_tripdata.vendor_id
+
+  #         {% endif %}
+  #         ;;
+  # }
 }
 
 # Automated tests below

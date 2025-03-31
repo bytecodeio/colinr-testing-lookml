@@ -1,36 +1,31 @@
 view: taxi_zone_lookup {
-  sql_table_name: dbo.taxi_zone_lookup ;;
+  sql_table_name: looker_scratch.pickup ;;
 
   dimension: borough {
     type: string
     description: "Corresponding Borough"
-    sql: ${TABLE}.["Borough"] ;;
+    sql: `${TABLE}.Pick Up Borough` ;;
     tags: ["stackable"]
   }
 
   dimension: location_id {
     type: number
     description: "TLC Zone ID"
-    sql: cast(${TABLE}.["LocationID"] as integer) ;;
+    sql: cast(`${TABLE}.Pick Up Location ID` as integer) ;;
   }
 
   dimension: service_zone {
     type: string
     description: "Service Zone"
-    sql: ${TABLE}.["service_zone"] ;;
+    sql: `${TABLE}.Pick Up Service Zone` ;;
     tags: ["stackable"]
   }
 
   dimension: zone {
     type: string
     description: "Zone name"
-    sql: ${TABLE}.["Zone"] ;;
+    sql: `${TABLE}.Pick Up Zone` ;;
     tags: ["stackable"]
-  }
-
-  measure: count {
-    type: count
-    drill_fields: []
   }
 
   measure: topn_join_trigger {

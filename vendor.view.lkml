@@ -1,24 +1,20 @@
 view: vendor {
-  sql_table_name: dbo.nyc_vendor ;;
+  sql_table_name: looker_scratch.vendor ;;
 
   dimension: id {
     primary_key: yes
     type: number
     description: "Unique identifier for each vendor"
-    sql: ${TABLE}.ID ;;
+    sql: ${TABLE}.`Vendor ID` ;;
   }
 
   dimension: name {
     type: string
     description: "Vendor name"
-    sql: ${TABLE}.Name ;;
+    sql: ${TABLE}.`Vendor Name` ;;
     tags: ["stackable"]
   }
 
-  measure: count {
-    type: count
-    drill_fields: [id, name]
-  }
 
   measure: topn_join_trigger {
     hidden: yes

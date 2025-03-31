@@ -44,13 +44,13 @@ view: yellow_tripdata_topn {
 
       sql:
            COALESCE(
-              {% if    yellow_tripdata.stack_by._parameter_value == "'Borough'" %} CAST( pick_up.["Borough"] as varchar(256) )
-              {% elsif yellow_tripdata.stack_by._parameter_value == "'Service Zone'" %} CAST( pick_up.["service_zone"] as varchar(256) )
-              {% elsif yellow_tripdata.stack_by._parameter_value == "'Zone'" %} CAST( pick_up.["Zone"] as varchar(256) )
-              {% elsif yellow_tripdata.stack_by._parameter_value == "'Type'" %} CAST( payment.Type as varchar(256) )
-              {% elsif yellow_tripdata.stack_by._parameter_value == "'Description'" %} CAST( rate.Description as varchar(256) )
-              {% elsif yellow_tripdata.stack_by._parameter_value == "'Name'" %} CAST( vendor.Name as varchar(256) )
-              {% elsif yellow_tripdata.stack_by._parameter_value == "'Store and Fwd Flag'" %} CAST( yellow_tripdata.store_and_fwd_flag as varchar(256) )
+              {% if    yellow_tripdata.stack_by._parameter_value == "'Borough'" %} CAST( pick_up.`Pick Up Borough` as string )
+              {% elsif yellow_tripdata.stack_by._parameter_value == "'Service Zone'" %} CAST( `pick_up.service_zone` as string )
+              {% elsif yellow_tripdata.stack_by._parameter_value == "'Zone'" %} CAST( `pick_up.Zone` as string )
+              {% elsif yellow_tripdata.stack_by._parameter_value == "'Type'" %} CAST( payment.Type as string )
+              {% elsif yellow_tripdata.stack_by._parameter_value == "'Description'" %} CAST( rate.Description as string )
+              {% elsif yellow_tripdata.stack_by._parameter_value == "'Name'" %} CAST( vendor.`Vendor Name` as string )
+              {% elsif yellow_tripdata.stack_by._parameter_value == "'Store and Fwd Flag'" %} CAST( yellow_tripdata.store_and_fwd_flag as string )
               {% else %} CASE '' WHEN '' THEN 'ALL' ELSE CAST(yellow_tripdata.store_and_fwd_flag as varchar) END
               {% endif %}
             , 'no_match' )
@@ -75,13 +75,13 @@ view: yellow_tripdata_topn {
       type: string
 
       sql:
-      {% if    yellow_tripdata.time_grain._parameter_value == 'Year' %}   cast( ${pickup_year} as varchar(256) )
-      {% elsif yellow_tripdata.time_grain._parameter_value == 'Quarter' %}   concat( cast(${pickup_year} as varchar(256)), '-', ${pickup_quarter_of_year} )
-      {% elsif yellow_tripdata.time_grain._parameter_value == 'Month' %}   cast( ${pickup_month} as varchar(256) )
-      {% elsif yellow_tripdata.time_grain._parameter_value == 'Week' %}   cast( ${pickup_week} as varchar(256) )
-      {% elsif yellow_tripdata.time_grain._parameter_value == 'Day' %}   cast( ${pickup_date} as varchar(256) )
-      {% elsif yellow_tripdata.time_grain._parameter_value == 'Hour' %}   cast( ${pickup_hour} as varchar(256) )
-      {% elsif yellow_tripdata.time_grain._parameter_value == 'Minute' %}   cast( ${pickup_time} as varchar(256) )
+      {% if    yellow_tripdata.time_grain._parameter_value == 'Year' %}   cast( ${pickup_year} as string )
+      {% elsif yellow_tripdata.time_grain._parameter_value == 'Quarter' %}   concat( cast(${pickup_year} as string), '-', ${pickup_quarter_of_year} )
+      {% elsif yellow_tripdata.time_grain._parameter_value == 'Month' %}   cast( ${pickup_month} as string )
+      {% elsif yellow_tripdata.time_grain._parameter_value == 'Week' %}   cast( ${pickup_week} as string )
+      {% elsif yellow_tripdata.time_grain._parameter_value == 'Day' %}   cast( ${pickup_date} as string )
+      {% elsif yellow_tripdata.time_grain._parameter_value == 'Hour' %}   cast( ${pickup_hour} as string )
+      {% elsif yellow_tripdata.time_grain._parameter_value == 'Minute' %}   cast( ${pickup_time} as string )
       {% else %} NULL
       {% endif %}
       ;;
@@ -190,7 +190,7 @@ view: yellow_tripdata_topn {
               ;;
         sql:
               CASE WHEN {% condition yellow_tripdata.stack_limit %} ${rank_number} {% endcondition %}
-              THEN CONCAT( RIGHT('0' + CAST(${rank_number} as varchar(256)), 2), ') ', ${stacked_dimension} )
+              THEN CONCAT( RIGHT(CONCAT('0' , CAST(${rank_number} as string)), 2), ') ', ${stacked_dimension} )
               ELSE 'Other'
               END
               ;;

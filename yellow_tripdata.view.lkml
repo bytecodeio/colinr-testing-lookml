@@ -1,8 +1,19 @@
 view: yellow_tripdata_base {
-  sql_table_name: dbo.yellow_tripdata ;;
+  derived_table: {
+    sql: SELECT
+    CONCAT(
+        FORMAT_TIMESTAMP('%Y%m%d%H%M%S', pickup_datetime), '_',
+        FORMAT_TIMESTAMP('%Y%m%d%H%M%S', dropoff_datetime)
+    ) AS ID,
+    *
+FROM
+    `bigquery-public-data.new_york_taxi_trips.tlc_yellow_trips_2018` ;;
+  }
+
+  # sql_table_name: bigquery-public-data.new_york_taxi_trips.tlc_yellow_trips_2018 ;;
 
   dimension: id {
-    type: number
+    type: string
     description: "Unique identifier for each trip"
     sql: ${TABLE}.id ;;
     primary_key: yes
@@ -11,7 +22,12 @@ view: yellow_tripdata_base {
   dimension: dolocation_id {
     type: number
     description: "TLC Taxi Zone in which the taximeter was disengaged."
-    sql: cast(${TABLE}.DOLocationID as integer) ;;
+    sql: cast(${TABLE}.dropoff_location_id as integer) ;;
+  }
+
+  dimension: dropoff_location_id {
+    type: number
+    sql: ${TABLE}.dropoff_location_id ;;
   }
 
   dimension: extra {
@@ -53,13 +69,13 @@ view: yellow_tripdata_base {
   dimension: pulocation_id {
     type: number
     description: "TLC Taxi Zone in which the taximeter was engaged."
-    sql: cast(${TABLE}.PULocationID as integer) ;;
+    sql: cast(${TABLE}.pickup_location_id as integer) ;;
   }
 
   dimension: ratecode_id {
     type: number
     description: "The final rate code in effect at the end of the trip. 1= Standard rate; 2= JFK; 3= Newark; 4= Nassau or Westchester; 5= Negotiated fare; 6= Group ride."
-    sql: cast(${TABLE}.RatecodeID as integer) ;;
+    sql: cast(${TABLE}.rate_code as integer) ;;
   }
 
   dimension: store_and_fwd_flag {
@@ -88,24 +104,37 @@ view: yellow_tripdata_base {
     sql: cast(${TABLE}.total_amount as decimal) ;;
   }
 
+  dimension: pickup_datetime {
+    type: date_time
+    datatype: datetime
+    sql: ${TABLE}.pickup_datetime  ;;
+  }
+  dimension: dropoff_datetime {
+    type: date_time
+    datatype: datetime
+    sql: ${TABLE}.dropoff_datetime  ;;
+  }
+
   dimension_group: dropoff {
     type: time
+    datatype: datetime
     timeframes: [year, quarter, month, week, date, day_of_week, hour, hour_of_day, time]
     description: "The date and time when the meter was disengaged."
-    sql: cast(${TABLE}.dropoff as datetime) ;;
+    sql: cast(${TABLE}.dropoff_datetime as datetime) ;;
   }
 
   dimension_group: pickup {
     type: time
+    datatype: datetime
     timeframes: [year, quarter, month, week, date, day_of_week, hour, hour_of_day, time]
     description: "The date and time when the meter was engaged."
-    sql: cast(${TABLE}.pickup as datetime) ;;
+    sql: cast(${TABLE}.pickup_datetime as datetime) ;;
   }
 
   dimension: trip_duration {
     type: number
     description: "Difference between pickup and dropoff times"
-    sql: {% if time_grain._parameter_value == "Time" or time_grain._parameter_value == "Hour"  or  time_grain._parameter_value == "HourOfDay" %} datediff(minute, ${dropoff_time}, ${pickup_time})
+    sql: {% if time_grain._parameter_value == "Time" or time_grain._parameter_value == "Hour"  or  time_grain._parameter_value == "HourOfDay" %} date_diff(${dropoff_time}, ${pickup_time}, MINUTE)
           {% else %}  ${TABLE}.trip_duration
           {% endif %}
                 ;;
@@ -129,7 +158,7 @@ view: yellow_tripdata_base {
   dimension: vendor_id {
     type: number
     description: "A code indicating the TPEP provider that provided the record. 1= Creative Mobile Technologies, LLC; 2= VeriFone Inc."
-    sql: cast(${TABLE}.VendorID as integer) ;;
+    sql: cast(${TABLE}.vendor_id as integer) ;;
   }
 
   measure: count {
@@ -236,13 +265,13 @@ explore: yellow_tripdata_base {}
 view: yellow_tripdata_day {
   extends: [yellow_tripdata_base]
   derived_table: {
-    sql: select  count(*) as trip_count, min(t.id) as id, sum(cast(t.total_amount as decimal)) as total_amount, t.dolocationid, t.payment_type, min(t.pickup) as pickup, t.pulocationid, t.ratecodeid,
-      t.store_and_fwd_flag, t.vendorid, sum(d.trip_duration) as trip_duration, sum(cast(t.trip_distance as decimal)) as trip_distance, sum(cast(t.tolls_amount as decimal)) as tolls_amount,
+    sql: select  count(*) as trip_count, min(t.id) as id, sum(cast(t.total_amount as decimal)) as total_amount, t.dropoff_location_id, t.payment_type, min(t.pickup_datetime) as pickup, min(t.pickup_datetime) as pickup_datetime, t.pickup_location_id, t.rate_code,
+      t.store_and_fwd_flag, t.vendor_id, sum(d.trip_duration) as trip_duration, sum(cast(t.trip_distance as decimal)) as trip_distance, sum(cast(t.tolls_amount as decimal)) as tolls_amount,
       sum(cast(t.tip_amount as decimal)) as tip_amount, sum(cast(t.passenger_count as int)) as passenger_count, sum(cast(t.mta_tax as decimal)) as mta_tax, sum(cast(t.fare_amount as decimal)) as fare_amount, sum(cast(t.extra as decimal)) as extra
-    from dbo.yellow_tripdata t
+    from ${yellow_tripdata_base.SQL_TABLE_NAME} t
     JOIN
-      (select id, datediff(minute, pickup, dropoff ) as trip_duration from dbo.yellow_tripdata) d ON d.id = t.id
-    GROUP BY dolocationid, payment_type, pulocationid, ratecodeid, store_and_fwd_flag, vendorid, CONVERT(VARCHAR(10),cast(t.pickup as datetime) ,120)
+      (select id, date_diff(pickup_datetime, dropoff_datetime, MINUTE ) as trip_duration from ${yellow_tripdata_base.SQL_TABLE_NAME}) d ON d.id = t.id
+    GROUP BY dropoff_location_id, payment_type, pickup_location_id, rate_code, store_and_fwd_flag, vendor_id, t.pickup_datetime
       ;;
     sql_trigger_value: select datepart(day, getdate()) ;;
 
@@ -251,11 +280,11 @@ view: yellow_tripdata_day {
 view: yellow_tripdata_week {
   extends: [yellow_tripdata_base]
   derived_table: {
-    sql: select  sum(t.trip_count) as trip_count, min(t.id) as id, sum(cast(t.total_amount as decimal)) as total_amount, t.dolocationid, t.payment_type, min(t.pickup) as pickup, t.pulocationid, t.ratecodeid,
-      t.store_and_fwd_flag, t.vendorid, sum(t.trip_duration) as trip_duration, sum(cast(t.trip_distance as decimal)) as trip_distance, sum(cast(t.tolls_amount as decimal)) as tolls_amount,
+    sql: select  sum(t.trip_count) as trip_count, min(t.id) as id, sum(cast(t.total_amount as decimal)) as total_amount, t.dropoff_location_id, t.payment_type, min(t.pickup) as pickup, t.pickup_location_id, t.rate_code,
+      t.store_and_fwd_flag, t.vendor_id, sum(t.trip_duration) as trip_duration, sum(cast(t.trip_distance as decimal)) as trip_distance, sum(cast(t.tolls_amount as decimal)) as tolls_amount,
       sum(cast(t.tip_amount as decimal)) as tip_amount, sum(cast(t.passenger_count as int)) as passenger_count, sum(cast(t.mta_tax as decimal)) as mta_tax, sum(cast(t.fare_amount as decimal)) as fare_amount, sum(cast(t.extra as decimal)) as extra
     from ${yellow_tripdata_day.SQL_TABLE_NAME} t
-    GROUP BY dolocationid, payment_type, pulocationid, ratecodeid, store_and_fwd_flag, vendorid, CONVERT(VARCHAR(10), CONVERT(VARCHAR(10),DATEADD(day,(0 - (((DATEPART(dw,cast(t.pickup as datetime) ) - 1) - 1 + 7) % (7))), cast(t.pickup as datetime)  ),120), 120)
+    GROUP BY dropoff_location_id, payment_type, pickup_location_id, rate_code, store_and_fwd_flag, vendor_id, t.pickup
       ;;
     sql_trigger_value: select datepart(day, getdate()) ;;
 
@@ -265,11 +294,11 @@ view: yellow_tripdata_week {
 view: yellow_tripdata_month {
   extends: [yellow_tripdata_base]
   derived_table: {
-    sql: select  sum(t.trip_count) as trip_count, min(t.id) as id, sum(cast(t.total_amount as decimal)) as total_amount, t.dolocationid, t.payment_type, min(t.pickup) as pickup, t.pulocationid, t.ratecodeid,
-      t.store_and_fwd_flag, t.vendorid, sum(t.trip_duration) as trip_duration, sum(cast(t.trip_distance as decimal)) as trip_distance, sum(cast(t.tolls_amount as decimal)) as tolls_amount,
+    sql: select  sum(t.trip_count) as trip_count, min(t.id) as id, sum(cast(t.total_amount as decimal)) as total_amount, t.dropoff_location_id, t.payment_type, min(t.pickup) as pickup, t.pickup_location_id, t.rate_code,
+      t.store_and_fwd_flag, t.vendor_id, sum(t.trip_duration) as trip_duration, sum(cast(t.trip_distance as decimal)) as trip_distance, sum(cast(t.tolls_amount as decimal)) as tolls_amount,
       sum(cast(t.tip_amount as decimal)) as tip_amount, sum(cast(t.passenger_count as int)) as passenger_count, sum(cast(t.mta_tax as decimal)) as mta_tax, sum(cast(t.fare_amount as decimal)) as fare_amount, sum(cast(t.extra as decimal)) as extra
     from ${yellow_tripdata_week.SQL_TABLE_NAME} t
-    GROUP BY dolocationid, payment_type, pulocationid, ratecodeid, store_and_fwd_flag, vendorid, CONVERT(VARCHAR(7),cast(t.pickup as datetime) ,120)
+    GROUP BY dropoff_location_id, payment_type, pickup_location_id, rate_code, store_and_fwd_flag, vendor_id, t.pickup
       ;;
     sql_trigger_value: select datepart(day, getdate()) ;;
 

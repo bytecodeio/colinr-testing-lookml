@@ -1,5 +1,5 @@
 view: rate {
-  sql_table_name: dbo.nyc_rate ;;
+  sql_table_name: looker_scratch.rate ;;
 
   dimension: id {
     primary_key: yes

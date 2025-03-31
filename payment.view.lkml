@@ -1,5 +1,5 @@
 view: payment {
-  sql_table_name: dbo.nyc_payment ;;
+  sql_table_name: looker_scratch.payment ;;
 
   dimension: id {
     primary_key: yes
